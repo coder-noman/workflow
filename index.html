@@ -1,498 +1,567 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>GovFlow | Secure Workflow Management</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>গভফ্লো | নিরাপত্তা ওয়ার্কফ্লো ব্যবস্থাপনা</title>
   <!-- Tailwind CSS CDN + Fonts + Heroicons (Font Awesome) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
   <style>
-    * { font-family: 'Inter', sans-serif; }
+    * { font-family: "Inter", sans-serif; }
     body { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); min-height: 100vh; }
     .glass-card {
       background: rgba(255, 255, 255, 0.92);
       backdrop-filter: blur(12px);
       border-radius: 1.5rem;
-      box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255,255,255,0.6);
+      box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.6);
       transition: none;
     }
-    .step-node {
-      transition: none;
-      min-width: 100px;
-    }
+    .step-node { transition: none; min-width: 100px; }
     .step-completed { background: #10b981; color: white; border: none; }
     .step-pending { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
     .step-rejected { background: #ef4444; color: white; border: none; }
     .step-current { background: #059669; color: white; border: none; }
-    .toast-slide {
-      animation: slideInRight 0.25s ease forwards;
-    }
+    .toast-slide { animation: slideInRight 0.25s ease forwards; }
     @keyframes slideInRight {
       from { opacity: 0; transform: translateX(50px); }
       to { opacity: 1; transform: translateX(0); }
     }
-    .role-switch-btn.active {
-      background: #059669;
-      color: white;
-      border-color: #059669;
-    }
+    .role-switch-btn.active { background: #059669; color: white; border-color: #059669; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: #a7f3d0; border-radius: 10px; }
-    button, .department-card, .role-switch-btn, .acceptReqBtn, .rejectReqBtn {
-      transition: none;
-    }
-    .comment-timeline {
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    }
+    button, .department-card, .role-switch-btn, .acceptReqBtn, .rejectReqBtn { transition: none; }
+    .comment-timeline { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); }
   </style>
 </head>
 <body>
+  <div id="app" class="min-h-screen flex flex-col"></div>
 
-<div id="app" class="min-h-screen flex flex-col"></div>
+  <script>
+    // ---------- হার্ডকোডেড ইউজার (বাংলা নাম) ----------
+    const USERS = [
+      { email: "demo@gmail.com", password: "1234", role: "applicant", name: "👤 আবেদনকারী", label: "আবেদনকারী" },
+      { email: "otiriktosochiv@gmail.com", password: "1234", role: "additional_secretary", name: "📋 অতিরিক্ত সচিব", label: "অতিরিক্ত সচিব" },
+      { email: "sohokarisochiv@gmail.com", password: "1234", role: "joint_secretary", name: "🤝 যুগ্ম সচিব", label: "যুগ্ম সচিব" },
+      { email: "sochiv@gmail.com", password: "1234", role: "secretary", name: "✍️ সচিব", label: "সচিব" },
+      { email: "wingshead@gmail.com", password: "1234", role: "division_head", name: "🦅 বিভাগীয় প্রধান", label: "বিভাগীয় প্রধান" }
+    ];
 
-<script>
-  // ---------- HARDCODED USERS WITH NEW ROLE NAMES ----------
-  const USERS = [
-    { email: "demo@gmail.com", password: "1234", role: "applicant", name: "👤 Applicant", label: "Applicant" },
-    { email: "otiriktosochiv@gmail.com", password: "1234", role: "additional_secretary", name: "📋 Additional Secretary", label: "Additional Secretary" },
-    { email: "sohokarisochiv@gmail.com", password: "1234", role: "joint_secretary", name: "🤝 Joint Secretary", label: "Joint Secretary" },
-    { email: "sochiv@gmail.com", password: "1234", role: "secretary", name: "✍️ Secretary", label: "Secretary" },
-    { email: "wingshead@gmail.com", password: "1234", role: "division_head", name: "🦅 Division Head", label: "Division Head" }
-  ];
+    // রোল ডিসপ্লে নাম (বাংলা)
+    const ROLE_DISPLAY_NAMES = {
+      applicant: "আবেদনকারী",
+      additional_secretary: "অতিরিক্ত সচিব",
+      joint_secretary: "যুগ্ম সচিব",
+      secretary: "সচিব",
+      division_head: "বিভাগীয় প্রধান"
+    };
 
-  // Role display names mapping
-  const ROLE_DISPLAY_NAMES = {
-    "applicant": "Applicant",
-    "additional_secretary": "Additional Secretary",
-    "joint_secretary": "Joint Secretary",
-    "secretary": "Secretary",
-    "division_head": "Division Head"
-  };
+    // স্টেপ অর্ডার (পাইপলাইন)
+    const STEP_ORDER = ["applicant", "additional_secretary", "joint_secretary", "secretary", "division_head"];
+    const STEP_LABELS = {
+      applicant: "📄 আবেদনকারী",
+      additional_secretary: "🔰 অতিরিক্ত সচিব",
+      joint_secretary: "🤝 যুগ্ম সচিব",
+      secretary: "✍️ সচিব",
+      division_head: "🦅 বিভাগীয় প্রধান"
+    };
+    const NEXT_ROLE_MAP = {
+      additional_secretary: "joint_secretary",
+      joint_secretary: "secretary",
+      secretary: "division_head",
+      division_head: "approved"
+    };
 
-  // Step order for pipeline (matching new roles)
-  const STEP_ORDER = ["applicant", "additional_secretary", "joint_secretary", "secretary", "division_head"];
-  const STEP_LABELS = {
-    applicant: "📄 Applicant",
-    additional_secretary: "🔰 Additional Secretary",
-    joint_secretary: "🤝 Joint Secretary",
-    secretary: "✍️ Secretary",
-    division_head: "🦅 Division Head"
-  };
-  const NEXT_ROLE_MAP = {
-    "additional_secretary": "joint_secretary",
-    "joint_secretary": "secretary",
-    "secretary": "division_head",
-    "division_head": "approved"
-  };
+    // Helper: localStorage
+    function getRequests() { return JSON.parse(localStorage.getItem("workflow_requests") || "[]"); }
+    function saveRequests(requests) { localStorage.setItem("workflow_requests", JSON.stringify(requests)); }
+    function getCurrentUser() { return JSON.parse(localStorage.getItem("workflow_user") || "null"); }
+    function setCurrentUser(user) { if (user) localStorage.setItem("workflow_user", JSON.stringify(user)); else localStorage.removeItem("workflow_user"); }
+    function logout() { setCurrentUser(null); renderLogin(); }
 
-  // Helper: localStorage
-  function getRequests() { return JSON.parse(localStorage.getItem("workflow_requests") || "[]"); }
-  function saveRequests(requests) { localStorage.setItem("workflow_requests", JSON.stringify(requests)); }
-  function getCurrentUser() { return JSON.parse(localStorage.getItem("workflow_user") || "null"); }
-  function setCurrentUser(user) { if(user) localStorage.setItem("workflow_user", JSON.stringify(user)); else localStorage.removeItem("workflow_user"); }
-  function logout() { setCurrentUser(null); renderLogin(); }
-
-  // Toast system
-  function showToast(message, type = "success") {
-    let container = document.getElementById("toast-container");
-    if (!container) { container = document.createElement("div"); container.id = "toast-container"; container.className = "fixed bottom-5 right-5 z-50 flex flex-col gap-2"; document.body.appendChild(container); }
-    const toast = document.createElement("div");
-    let bgClass = "bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800";
-    let icon = "fa-check-circle";
-    if (type === "error") { bgClass = "bg-rose-50 border-l-4 border-rose-500 text-rose-800"; icon = "fa-exclamation-circle"; }
-    if (type === "info") { bgClass = "bg-sky-50 border-l-4 border-sky-500 text-sky-800"; icon = "fa-info-circle"; }
-    toast.className = `flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg ${bgClass} toast-slide backdrop-blur-sm font-medium`;
-    toast.innerHTML = `<i class="fas ${icon} text-lg"></i><span>${message}</span>`;
-    container.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = "0"; toast.style.transform = "translateX(30px)"; setTimeout(() => toast.remove(), 300); }, 3200);
-  }
-
-  async function withLoading(btnId, callback) {
-    const btn = btnId ? document.getElementById(btnId) : null;
-    const originalHtml = btn ? btn.innerHTML : "";
-    if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner animate-spin mr-2"></i> Processing...`; }
-    try { await callback(); } catch(e) { console.error(e); showToast("Action error", "error"); }
-    finally { if(btn) { btn.disabled = false; btn.innerHTML = originalHtml; } }
-  }
-
-  // Process Accept/Reject
-  function updateRequestWorkflow(requestId, action, officerRole, comment) {
-    const requests = getRequests();
-    const index = requests.findIndex(r => r.id === requestId);
-    if (index === -1) return false;
-    const req = { ...requests[index] };
-    const historyEntry = { role: officerRole, action, comment: comment || "", time: new Date().toISOString() };
-    req.history = [...(req.history || []), historyEntry];
-    
-    if (action === "reject") {
-      req.status = "rejected";
-      req.currentRole = null;
-    } 
-    else if (action === "accept") {
-      const next = NEXT_ROLE_MAP[officerRole];
-      if (next === "approved") {
-        req.status = "approved";
-        req.currentRole = null;
-      } else {
-        req.status = "pending";
-        req.currentRole = next;
+    // টোস্ট নোটিফিকেশন
+    function showToast(message, type = "success") {
+      let container = document.getElementById("toast-container");
+      if (!container) {
+        container = document.createElement("div");
+        container.id = "toast-container";
+        container.className = "fixed bottom-5 right-5 z-50 flex flex-col gap-2";
+        document.body.appendChild(container);
       }
+      const toast = document.createElement("div");
+      let bgClass = "bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800";
+      let icon = "fa-check-circle";
+      if (type === "error") { bgClass = "bg-rose-50 border-l-4 border-rose-500 text-rose-800"; icon = "fa-exclamation-circle"; }
+      if (type === "info") { bgClass = "bg-sky-50 border-l-4 border-sky-500 text-sky-800"; icon = "fa-info-circle"; }
+      toast.className = `flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg ${bgClass} toast-slide backdrop-blur-sm font-medium`;
+      toast.innerHTML = `<i class="fas ${icon} text-lg"></i><span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateX(30px)";
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
     }
-    requests[index] = req;
-    saveRequests(requests);
-    return true;
-  }
 
-  // Function to render comments timeline beautifully
-  function renderCommentsTimeline(request) {
-    if (!request || !request.history || request.history.length === 0) {
-      return `<div class="text-center text-gray-400 text-sm py-3">No comments yet</div>`;
+    async function withLoading(btnId, callback) {
+      const btn = btnId ? document.getElementById(btnId) : null;
+      const originalHtml = btn ? btn.innerHTML : "";
+      if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner animate-spin mr-2"></i> প্রক্রিয়াধীন...`; }
+      try { await callback(); } catch (e) { console.error(e); showToast("ত্রুটি ঘটেছে", "error"); }
+      finally { if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; } }
     }
-    
-    // Filter entries that have comments (non-empty)
-    const commentsWithContent = request.history.filter(entry => entry.comment && entry.comment.trim().length > 0);
-    
-    if (commentsWithContent.length === 0) {
-      return `<div class="text-center text-gray-400 text-sm py-3">No comments yet</div>`;
+
+    // এক্সেপ্ট/রিজেক্ট প্রসেস
+    function updateRequestWorkflow(requestId, action, officerRole, comment) {
+      const requests = getRequests();
+      const index = requests.findIndex((r) => r.id === requestId);
+      if (index === -1) return false;
+      const req = { ...requests[index] };
+      const historyEntry = { role: officerRole, action, comment: comment || "", time: new Date().toISOString() };
+      req.history = [...(req.history || []), historyEntry];
+
+      if (action === "reject") {
+        req.status = "rejected";
+        req.currentRole = null;
+      } else if (action === "accept") {
+        const next = NEXT_ROLE_MAP[officerRole];
+        if (next === "approved") {
+          req.status = "approved";
+          req.currentRole = null;
+        } else {
+          req.status = "pending";
+          req.currentRole = next;
+        }
+      }
+      requests[index] = req;
+      saveRequests(requests);
+      return true;
     }
-    
-    return `
-      <div class="comment-timeline rounded-xl p-4 mt-3" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
-        <div class="flex items-center gap-2 mb-3">
-          <i class="fas fa-comment-dots text-emerald-600 text-sm"></i>
-          <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Activity & Comments</span>
-        </div>
-        <div class="space-y-3 max-h-48 overflow-y-auto pr-2">
-          ${commentsWithContent.map((entry, idx) => {
-            const roleName = ROLE_DISPLAY_NAMES[entry.role] || entry.role;
-            const actionIcon = entry.action === 'accept' ? 'fa-check-circle' : (entry.action === 'reject' ? 'fa-times-circle' : 'fa-pen');
-            const actionColor = entry.action === 'accept' ? 'text-emerald-600' : (entry.action === 'reject' ? 'text-rose-600' : 'text-blue-600');
-            const formattedTime = new Date(entry.time).toLocaleString();
-            return `
-              <div class="flex gap-3 items-start">
-                <div class="flex-shrink-0 mt-0.5">
-                  <div class="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center">
-                    <i class="fas ${actionIcon} ${actionColor} text-xs"></i>
+
+    // কমেন্ট টাইমলাইন রেন্ডার (বাংলা)
+    function renderCommentsTimeline(request) {
+      if (!request || !request.history || request.history.length === 0) {
+        return `<div class="text-center text-gray-400 text-sm py-3">কোন মন্তব্য নেই</div>`;
+      }
+      const commentsWithContent = request.history.filter((entry) => entry.comment && entry.comment.trim().length > 0);
+      if (commentsWithContent.length === 0) {
+        return `<div class="text-center text-gray-400 text-sm py-3">কোন মন্তব্য নেই</div>`;
+      }
+      return `
+        <div class="comment-timeline rounded-xl p-4 mt-3" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+          <div class="flex items-center gap-2 mb-3">
+            <i class="fas fa-comment-dots text-emerald-600 text-sm"></i>
+            <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">কার্যক্রম ও মন্তব্য</span>
+          </div>
+          <div class="space-y-3 max-h-48 overflow-y-auto pr-2">
+            ${commentsWithContent.map((entry) => {
+              const roleName = ROLE_DISPLAY_NAMES[entry.role] || entry.role;
+              const actionIcon = entry.action === "accept" ? "fa-check-circle" : (entry.action === "reject" ? "fa-times-circle" : "fa-pen");
+              const actionColor = entry.action === "accept" ? "text-emerald-600" : (entry.action === "reject" ? "text-rose-600" : "text-blue-600");
+              const actionText = entry.action === "accept" ? "গ্রহণ" : (entry.action === "reject" ? "নাকচ" : "মন্তব্য");
+              const formattedTime = new Date(entry.time).toLocaleString("bn-BD");
+              return `
+                <div class="flex gap-3 items-start">
+                  <div class="flex-shrink-0 mt-0.5">
+                    <div class="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center">
+                      <i class="fas ${actionIcon} ${actionColor} text-xs"></i>
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                      <div class="flex justify-between items-start flex-wrap gap-2 mb-1">
+                        <span class="font-semibold text-sm text-gray-800">${roleName}</span>
+                        <span class="text-xs text-gray-400">${formattedTime}</span>
+                      </div>
+                      <div class="text-xs text-gray-500 mb-1 capitalize">
+                        <span class="inline-flex items-center gap-1">
+                          <i class="fas fa-tag text-gray-400 text-[10px]"></i>
+                          কর্ম: ${actionText}
+                        </span>
+                      </div>
+                      <p class="text-sm text-gray-700 leading-relaxed">${escapeHtml(entry.comment)}</p>
+                    </div>
                   </div>
                 </div>
-                <div class="flex-1">
-                  <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-                    <div class="flex justify-between items-start flex-wrap gap-2 mb-1">
-                      <span class="font-semibold text-sm text-gray-800">${roleName}</span>
-                      <span class="text-xs text-gray-400">${formattedTime}</span>
-                    </div>
-                    <div class="text-xs text-gray-500 mb-1 capitalize">
-                      <span class="inline-flex items-center gap-1">
-                        <i class="fas fa-tag text-gray-400 text-[10px]"></i>
-                        Action: ${entry.action}
-                      </span>
-                    </div>
-                    <p class="text-sm text-gray-700 leading-relaxed">${escapeHtml(entry.comment)}</p>
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `;
-  }
-  
-  // Helper to escape HTML
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  // Pipeline visual component - applicant step always GREEN if request exists, rejected step shows RED
-  function renderPipelineComponent(request) {
-    if (!request) return `<div class="text-center text-gray-400 py-4">No data</div>`;
-    const history = request.history || [];
-    const status = request.status;
-    const currentRole = request.currentRole;
-    
-    let stepState = {};
-    STEP_ORDER.forEach(step => { stepState[step] = "pending"; });
-    
-    // For applicant: always mark as completed (green) since they created the request
-    stepState["applicant"] = "completed";
-    
-    // mark completed steps from accepted history
-    history.filter(h => h.action === "accept").forEach(h => {
-      const idx = STEP_ORDER.indexOf(h.role);
-      if (idx !== -1) stepState[STEP_ORDER[idx]] = "completed";
-    });
-    
-    // if rejected: find which step rejected and mark that specific step as rejected
-    const rejectEntry = history.find(h => h.action === "reject");
-    if (rejectEntry && status === "rejected") {
-      const rejectStep = rejectEntry.role;
-      const idxRej = STEP_ORDER.indexOf(rejectStep);
-      if (idxRej !== -1 && idxRej + 1 < STEP_ORDER.length) stepState[STEP_ORDER[idxRej + 1]] = "rejected";
-      else if (idxRej !== -1) stepState[STEP_ORDER[idxRej]] = "rejected";
-    }
-    
-    // mark current pending step
-    if (status === "pending" && currentRole && stepState[currentRole] !== "completed") {
-      stepState[currentRole] = "current";
-    }
-    if (status === "approved") {
-      STEP_ORDER.forEach(step => { if(step !== "applicant") stepState[step] = "completed"; });
-    }
-    
-    let stepsHtml = `<div class="flex flex-wrap md:flex-nowrap items-stretch gap-2 justify-between">`;
-    STEP_ORDER.forEach((step, idx) => {
-      let state = stepState[step];
-      let bgClass = "step-pending"; let icon = "fa-clock"; let textColor = "text-gray-600";
-      if (state === "completed") { bgClass = "step-completed"; icon = "fa-check-circle"; textColor = "text-white"; }
-      else if (state === "rejected") { bgClass = "step-rejected"; icon = "fa-times-circle"; textColor = "text-white"; }
-      else if (state === "current") { bgClass = "step-current"; icon = "fa-spinner fa-pulse"; textColor = "text-white"; }
-      stepsHtml += `
-        <div class="flex-1 step-node rounded-xl p-3 text-center ${bgClass} shadow-sm">
-          <i class="fas ${icon} text-md mb-1 block"></i>
-          <div class="text-xs font-semibold ${textColor}">${STEP_LABELS[step]}</div>
+              `;
+            }).join("")}
+          </div>
         </div>
       `;
-      if (idx < STEP_ORDER.length-1) stepsHtml += `<div class="w-3 text-gray-400 flex items-center"><i class="fas fa-arrow-right text-xs hidden md:inline"></i></div>`;
-    });
-    stepsHtml += `</div>`;
-    
-    // Add comments timeline beautifully
-    const commentsHtml = renderCommentsTimeline(request);
-    
-    return `<div class="mt-4 pt-2">${stepsHtml}${commentsHtml}</div>`;
-  }
+    }
 
-  // ----- LOGIN PAGE -----
-  function renderLogin() {
-    const app = document.getElementById("app");
-    app.innerHTML = `
-      <div class="min-h-screen flex items-center justify-center p-5">
-        <div class="glass-card w-full max-w-md p-8 shadow-2xl">
-          <div class="text-center mb-7">
-            <i class="fas fa-shield-hawk text-emerald-600 text-5xl mb-3"></i>
-            <h1 class="text-3xl font-extrabold text-gray-800">Gov<span class="text-emerald-600">Flow</span></h1>
-            <p class="text-gray-500 text-sm mt-1">Government approval workflow</p>
-          </div>
-          <form id="loginForm">
-            <div class="mb-4"><label class="block text-gray-700 text-sm font-semibold mb-1">Email</label><input type="email" id="loginEmail" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-400 outline-none" placeholder="user@example.com" required></div>
-            <div class="mb-5"><label class="block text-gray-700 text-sm font-semibold mb-1">Password</label><input type="password" id="loginPassword" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-400" placeholder="••••" required></div>
-            <button type="submit" id="loginBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 mb-8 rounded-xl font-bold transition shadow-md">Sign in →</button>
-          </form>
-        </div>
-      </div>
-    `;
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("loginEmail").value.trim();
-      const pwd = document.getElementById("loginPassword").value;
-      const user = USERS.find(u => u.email === email && u.password === pwd);
-      if (user) {
-        showToast(`Welcome ${user.name}`, "success");
-        setCurrentUser({ email: user.email, role: user.role, name: user.name, label: user.label });
-        renderDashboard();
-      } else showToast("Invalid credentials. Use 1234", "error");
-    });
-  }
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
 
-  // ----- DASHBOARD -----
-  function renderDashboard() {
-    const currentUser = getCurrentUser();
-    if (!currentUser) { renderLogin(); return; }
-    
-    const app = document.getElementById("app");
-    app.innerHTML = `
-      <div class="flex flex-col lg:flex-row min-h-screen">
-        <!-- Sidebar -->
-        <div class="lg:w-80 glass-card m-4 lg:m-5 p-5 lg:sticky lg:top-5 h-fit lg:h-[calc(100vh-2.5rem)] overflow-auto">
-          <div class="flex items-center gap-3 border-b border-gray-200 pb-4 mb-4">
-            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white"><i class="fas fa-user-astronaut text-xl"></i></div>
-            <div><p class="font-bold text-gray-800">${currentUser.name}</p><p class="text-xs text-emerald-600 font-mono">${currentUser.role}</p></div>
-          </div>
-          <div class="mb-6"><p class="text-xs uppercase text-gray-400 font-semibold tracking-wide">Role Switcher</p><div id="roleSwitcher" class="grid grid-cols-2 gap-2 mt-2"></div></div>
-          <div class="mt-4 pt-4 border-t border-gray-100"><button id="globalLogout" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 py-2.5 rounded-xl font-medium transition"><i class="fas fa-sign-out-alt mr-2"></i>Logout</button></div>
-        </div>
-        
-        <!-- Main content -->
-        <div class="flex-1 p-5 lg:pr-6">
-          <div class="flex justify-between items-center flex-wrap mb-5">
-            <h1 class="text-2xl md:text-3xl font-black bg-gradient-to-r from-emerald-800 to-teal-800 bg-clip-text text-transparent">Security Workflow Console</h1>
-            <div class="text-sm bg-white/60 backdrop-blur rounded-full px-3 py-1"><i class="fas fa-database mr-1"></i> Active</div>
-          </div>
-          
-          <!-- Department Cards (only security works) -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            ${['🏛️ Home Affairs', '🌾 Agriculture', '❤️ Health', '⚡ Energy'].map((dept, i) => `<div class="glass-card p-4 text-center cursor-pointer department-card" data-dept="${dept}"><div class="text-3xl mb-1">${dept.split(' ')[0]}</div><p class="font-medium">${dept.split(' ').slice(1).join(' ')}</p></div>`).join('')}
-          </div>
-          <div id="sectionOptions" class="hidden mb-6"></div>
-          
-          <!-- Dynamic content area -->
-          <div id="dynamicContentArea">
-            <div class="glass-card p-5 mb-5"><div class="animate-pulse flex gap-2"><i class="fas fa-spinner fa-spin text-emerald-500"></i> Loading dashboard...</div></div>
-          </div>
-        </div>
-        <div id="toast-container" class="fixed bottom-5 right-5 z-50"></div>
-      </div>
-    `;
-    
-    // Role switcher
-    const roleSwitcher = document.getElementById("roleSwitcher");
-    USERS.forEach(user => {
-      const btn = document.createElement("button");
-      btn.className = `text-xs px-2 py-1.5 rounded-lg transition ${currentUser.role === user.role ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`;
-      btn.innerHTML = user.label;
-      btn.onclick = () => {
-        setCurrentUser({ email: user.email, role: user.role, name: user.name, label: user.label });
-        showToast(`Switched to ${user.name}`, "info");
-        renderDashboard();
-      };
-      roleSwitcher.appendChild(btn);
-    });
-    
-    document.getElementById("globalLogout").addEventListener("click", logout);
-    
-    // Department handler (only Security)
-    const deptCards = document.querySelectorAll(".department-card");
-    const sectionDiv = document.getElementById("sectionOptions");
-    deptCards.forEach(card => {
-      card.addEventListener("click", () => {
-        const deptName = card.getAttribute("data-dept");
-        sectionDiv.classList.remove("hidden");
-        sectionDiv.innerHTML = `
-          <div class="flex gap-3 flex-wrap">
-            <button data-opt="Security" class="px-5 py-2 rounded-xl bg-emerald-100 font-semibold shadow-sm">🔒 Security (Active)</button>
-            <button data-opt="Karagar" class="px-5 py-2 rounded-xl bg-gray-100">🏛️ Karagar</button>
-            <button data-opt="ONU" class="px-5 py-2 rounded-xl bg-gray-100">🌐 ONU</button>
-            <button data-opt="Odisakha" class="px-5 py-2 rounded-xl bg-gray-100">📜 Odisakha</button>
+    // পাইপলাইন ভিজুয়াল কম্পোনেন্ট (ট্র্যাকিং প্রসেস)
+    function renderPipelineComponent(request) {
+      if (!request) return `<div class="text-center text-gray-400 py-4">কোন তথ্য নেই</div>`;
+      const history = request.history || [];
+      const status = request.status;
+      const currentRole = request.currentRole;
+
+      let stepState = {};
+      STEP_ORDER.forEach((step) => { stepState[step] = "pending"; });
+      stepState["applicant"] = "completed";
+
+      history.filter((h) => h.action === "accept").forEach((h) => {
+        const idx = STEP_ORDER.indexOf(h.role);
+        if (idx !== -1) stepState[STEP_ORDER[idx]] = "completed";
+      });
+
+      const rejectEntry = history.find((h) => h.action === "reject");
+      if (rejectEntry && status === "rejected") {
+        const rejectStep = rejectEntry.role;
+        const idxRej = STEP_ORDER.indexOf(rejectStep);
+        if (idxRej !== -1 && idxRej + 1 < STEP_ORDER.length) stepState[STEP_ORDER[idxRej + 1]] = "rejected";
+        else if (idxRej !== -1) stepState[STEP_ORDER[idxRej]] = "rejected";
+      }
+
+      if (status === "pending" && currentRole && stepState[currentRole] !== "completed") {
+        stepState[currentRole] = "current";
+      }
+      if (status === "approved") {
+        STEP_ORDER.forEach((step) => { if (step !== "applicant") stepState[step] = "completed"; });
+      }
+
+      let stepsHtml = `<div class="flex flex-wrap md:flex-nowrap items-stretch gap-2 justify-between">`;
+      STEP_ORDER.forEach((step, idx) => {
+        let state = stepState[step];
+        let bgClass = "step-pending";
+        let icon = "fa-clock";
+        let textColor = "text-gray-600";
+        if (state === "completed") { bgClass = "step-completed"; icon = "fa-check-circle"; textColor = "text-white"; }
+        else if (state === "rejected") { bgClass = "step-rejected"; icon = "fa-times-circle"; textColor = "text-white"; }
+        else if (state === "current") { bgClass = "step-current"; icon = "fa-spinner fa-pulse"; textColor = "text-white"; }
+        stepsHtml += `
+          <div class="flex-1 step-node rounded-xl p-3 text-center ${bgClass} shadow-sm">
+            <i class="fas ${icon} text-md mb-1 block"></i>
+            <div class="text-xs font-semibold ${textColor}">${STEP_LABELS[step]}</div>
           </div>
         `;
-        document.querySelectorAll("[data-opt]").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-            const opt = btn.getAttribute("data-opt");
-            if (opt === "Security") { showToast("Security section ready", "success"); loadProperDashboard(); }
-            else showToast(`System is under processing: ${opt}`, "info");
+        if (idx < STEP_ORDER.length - 1) stepsHtml += `<div class="w-3 text-gray-400 flex items-center"><i class="fas fa-arrow-right text-xs hidden md:inline"></i></div>`;
+      });
+      stepsHtml += `</div>`;
+
+      // তথ্য ইনপুট অপারেটর দেখানো হবে ট্র্যাকিং প্রসেসে
+      const operatorHtml = request.dataOperator ? `
+        <div class="mt-3 pt-2 border-t border-gray-200">
+          <div class="flex items-center gap-2 text-xs text-gray-500">
+            <i class="fas fa-user-check text-emerald-500"></i>
+            <span class="font-medium">তথ্য ইনপুট অপারেটর:</span>
+            <span>${escapeHtml(request.dataOperator)}</span>
+          </div>
+        </div>
+      ` : '';
+
+      const commentsHtml = renderCommentsTimeline(request);
+      return `<div class="mt-4 pt-2">${stepsHtml}${operatorHtml}${commentsHtml}</div>`;
+    }
+
+    // ----- লগইন পৃষ্ঠা -----
+    function renderLogin() {
+      const app = document.getElementById("app");
+      app.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-5">
+          <div class="glass-card w-full max-w-md p-8 shadow-2xl">
+            <div class="text-center mb-7">
+              <i class="fas fa-shield-hawk text-emerald-600 text-5xl mb-3"></i>
+              <h1 class="text-3xl font-extrabold text-gray-800">গভ<span class="text-emerald-600">ফ্লো</span></h1>
+              <p class="text-gray-500 text-sm mt-1">সরকারি অনুমোদন ওয়ার্কফ্লো</p>
+            </div>
+            <form id="loginForm">
+              <div class="mb-4"><label class="block text-gray-700 text-sm font-semibold mb-1">ইমেইল</label><input type="email" id="loginEmail" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-400 outline-none" placeholder="user@example.com" required></div>
+              <div class="mb-5"><label class="block text-gray-700 text-sm font-semibold mb-1">পাসওয়ার্ড</label><input type="password" id="loginPassword" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-400" placeholder="••••" required></div>
+              <button type="submit" id="loginBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 mb-8 rounded-xl font-bold transition shadow-md">প্রবেশ করুন →</button>
+            </form>
+            <div class="text-center text-xs text-gray-400">পাসওয়ার্ড: 1234</div>
+          </div>
+        </div>
+      `;
+      document.getElementById("loginForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = document.getElementById("loginEmail").value.trim();
+        const pwd = document.getElementById("loginPassword").value;
+        const user = USERS.find((u) => u.email === email && u.password === pwd);
+        if (user) {
+          showToast(`স্বাগতম ${user.name}`, "success");
+          setCurrentUser({ email: user.email, role: user.role, name: user.name, label: user.label });
+          renderDashboard();
+        } else showToast("ভুল ক্রেডেনশিয়াল। 1234 ব্যবহার করুন", "error");
+      });
+    }
+
+    // ----- ড্যাশবোর্ড (প্রথম পৃষ্ঠা: ৪টি বিভাগ কার্ড) -----
+    function renderDashboard() {
+      const currentUser = getCurrentUser();
+      if (!currentUser) { renderLogin(); return; }
+
+      const app = document.getElementById("app");
+      app.innerHTML = `
+        <div class="flex flex-col lg:flex-row min-h-screen">
+          <div class="lg:w-80 glass-card m-4 lg:m-5 p-5 lg:sticky lg:top-5 h-fit lg:h-[calc(100vh-2.5rem)] overflow-auto">
+            <div class="flex items-center gap-3 border-b border-gray-200 pb-4 mb-4">
+              <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white"><i class="fas fa-user-astronaut text-xl"></i></div>
+              <div><p class="font-bold text-gray-800">${currentUser.name}</p><p class="text-xs text-emerald-600 font-mono">${currentUser.role}</p></div>
+            </div>
+            <div class="mb-6"><p class="text-xs uppercase text-gray-400 font-semibold tracking-wide">ভূমিকা পরিবর্তন</p><div id="roleSwitcher" class="grid grid-cols-2 gap-2 mt-2"></div></div>
+            <div class="mt-4 pt-4 border-t border-gray-100"><button id="globalLogout" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 py-2.5 rounded-xl font-medium transition"><i class="fas fa-sign-out-alt mr-2"></i>লগআউট</button></div>
+          </div>
+          
+          <div class="flex-1 p-5 lg:pr-6">
+            <div class="flex justify-between items-center flex-wrap mb-5">
+              <h1 class="text-2xl md:text-3xl font-black bg-gradient-to-r from-emerald-800 to-teal-800 bg-clip-text text-transparent">ফাইল ওয়ার্কফ্লো কনসোল</h1>
+              <div class="text-sm bg-white/60 backdrop-blur rounded-full px-3 py-1"><i class="fas fa-database mr-1"></i> সক্রিয়</div>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div class="glass-card p-4 text-center cursor-pointer department-card" data-dept="Home Affairs"><div class="text-3xl mb-1">🏛️</div><p class="font-medium">স্বরাষ্ট্র মন্ত্রণালয়</p></div>
+              <div class="glass-card p-4 text-center cursor-pointer department-card" data-dept="Agriculture"><div class="text-3xl mb-1">🌾</div><p class="font-medium">কৃষি মন্ত্রণালয়</p></div>
+              <div class="glass-card p-4 text-center cursor-pointer department-card" data-dept="Health"><div class="text-3xl mb-1">❤️</div><p class="font-medium">স্বাস্থ্য মন্ত্রণালয়</p></div>
+              <div class="glass-card p-4 text-center cursor-pointer department-card" data-dept="Energy"><div class="text-3xl mb-1">⚡</div><p class="font-medium">জ্বালানি মন্ত্রণালয়</p></div>
+            </div>
+            <div id="sectionOptions" class="hidden mb-6"></div>
+            
+            <div id="dynamicContentArea">
+              <div class="glass-card p-5 mb-5 text-center text-gray-500">
+                <i class="fas fa-hand-point-up text-3xl text-emerald-400 mb-2 block"></i>
+                <p>একটি বিভাগ নির্বাচন করুন</p>
+              </div>
+            </div>
+          </div>
+          <div id="toast-container" class="fixed bottom-5 right-5 z-50"></div>
+        </div>
+      `;
+
+      const roleSwitcher = document.getElementById("roleSwitcher");
+      USERS.forEach((user) => {
+        const btn = document.createElement("button");
+        btn.className = `text-xs px-2 py-1.5 rounded-lg transition ${currentUser.role === user.role ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-700"}`;
+        btn.innerHTML = user.label;
+        btn.onclick = () => {
+          setCurrentUser({ email: user.email, role: user.role, name: user.name, label: user.label });
+          showToast(`${user.name} এ সুইচ করা হয়েছে`, "info");
+          renderDashboard();
+        };
+        roleSwitcher.appendChild(btn);
+      });
+
+      document.getElementById("globalLogout").addEventListener("click", logout);
+
+      const deptCards = document.querySelectorAll(".department-card");
+      const sectionDiv = document.getElementById("sectionOptions");
+
+      deptCards.forEach((card) => {
+        card.addEventListener("click", () => {
+          const deptName = card.querySelector("p")?.innerText || card.getAttribute("data-dept");
+          sectionDiv.classList.remove("hidden");
+          sectionDiv.innerHTML = `
+            <div class="glass-card p-4">
+              <p class="text-sm text-gray-500 mb-3">${deptName} - নির্বাচন করুন</p>
+              <div class="flex gap-3 flex-wrap">
+                <button data-opt="Security" class="px-5 py-2 rounded-xl bg-emerald-100 font-semibold shadow-sm hover:bg-emerald-200 transition-none">🔒 নিরাপত্তা (সক্রিয়)</button>
+                <button data-opt="Karagar" class="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-none">🏛️ কারাগার</button>
+                <button data-opt="ONU" class="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-none">🌐 ওএনইউ</button>
+                <button data-opt="Odisakha" class="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-none">📜 ওডিশাখা</button>
+              </div>
+            </div>
+          `;
+          document.querySelectorAll("[data-opt]").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              const opt = btn.getAttribute("data-opt");
+              if (opt === "Security") {
+                showToast("নিরাপত্তা বিভাগ সক্রিয়", "success");
+                loadProperDashboard();
+              } else {
+                showToast(`সিস্টেম প্রক্রিয়াধীন: ${opt === "Karagar" ? "কারাগার" : opt === "ONU" ? "ওএনইউ" : "ওডিশাখা"}`, "info");
+              }
+            });
           });
         });
       });
-    });
-    
-    function loadProperDashboard() {
+
+      function loadProperDashboard() {
+        const user = getCurrentUser();
+        if (user.role === "applicant") renderApplicantUI();
+        else renderOfficerApprovalUI();
+      }
+    }
+
+    // ----- আবেদনকারী ইন্টারফেস (৫টি ফিল্ড: নথি নম্বর, প্রবেশের তারিখ, প্রস্থানের তারিখ, নোট, তথ্য ইনপুট অপারেটর) -----
+    function renderApplicantUI() {
+      const container = document.getElementById("dynamicContentArea");
+      if (!container) return;
+      container.innerHTML = `
+        <div class="glass-card p-6 mb-7">
+          <h2 class="text-xl font-bold flex gap-2"><i class="fas fa-pen-alt text-emerald-500"></i> নতুন নিরাপত্তা ফাইল আবেদন</h2>
+          <form id="applicantRequestForm" class="mt-4 grid md:grid-cols-2 gap-4">
+            <div><label class="text-sm font-medium">📁 নথি নম্বর *</label><input type="text" id="fileNum" required class="w-full border rounded-xl p-2.5 mt-1" placeholder="যেমন: সুরক্ষা-২০২৫/০০১"></div>
+            <div><label class="text-sm font-medium">📅 প্রবেশের তারিখ *</label><input type="date" id="entryDt" required class="w-full border rounded-xl p-2.5"></div>
+            <div><label class="text-sm font-medium">🚪 প্রস্থানের তারিখ *</label><input type="date" id="exitDt" required class="w-full border rounded-xl p-2.5"></div>
+            <div class="md:col-span-2"><label class="text-sm font-medium">📝 নোট</label><textarea id="noteTxt" rows="2" class="w-full border rounded-xl p-2.5" placeholder="বিস্তারিত বিবরণ"></textarea></div>
+            <div class="md:col-span-2"><label class="text-sm font-medium">👤 তথ্য ইনপুট অপারেটর *</label><input type="text" id="dataOperator" required class="w-full border rounded-xl p-2.5 mt-1" placeholder="যেমন: মো. রহিম, সহকারী কর্মকর্তা"></div>
+            <div class="md:col-span-2"><button type="submit" id="submitReqBtn" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-semibold">আবেদন জমা দিন</button></div>
+          </form>
+        </div>
+        <div class="glass-card p-5"><h3 class="font-bold text-lg mb-3"><i class="fas fa-list-ul"></i> আমার জমা দেওয়া আবেদন</h3><div id="myRequestsList"></div></div>
+      `;
       const user = getCurrentUser();
-      if (user.role === "applicant") renderApplicantUI();
-      else renderOfficerApprovalUI();
-    }
-    loadProperDashboard();
-  }
-  
-  // ----- APPLICANT INTERFACE -----
-  function renderApplicantUI() {
-    const container = document.getElementById("dynamicContentArea");
-    if (!container) return;
-    container.innerHTML = `
-      <div class="glass-card p-6 mb-7">
-        <h2 class="text-xl font-bold flex gap-2"><i class="fas fa-pen-alt text-emerald-500"></i> New Security File Request</h2>
-        <form id="applicantRequestForm" class="mt-4 grid md:grid-cols-2 gap-4">
-          <div><label class="text-sm font-medium">📁 File Number *</label><input type="text" id="fileNum" required class="w-full border rounded-xl p-2.5 mt-1"></div>
-          <div><label class="text-sm font-medium">📅 Entry Date *</label><input type="date" id="entryDt" required class="w-full border rounded-xl p-2.5"></div>
-          <div><label class="text-sm font-medium">🚪 Exit Date *</label><input type="date" id="exitDt" required class="w-full border rounded-xl p-2.5"></div>
-          <div class="md:col-span-2"><label class="text-sm font-medium">📝 Note</label><textarea id="noteTxt" rows="2" class="w-full border rounded-xl p-2.5"></textarea></div>
-          <div class="md:col-span-2"><button type="submit" id="submitReqBtn" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-semibold">Submit Request</button></div>
-        </form>
-      </div>
-      <div class="glass-card p-5"><h3 class="font-bold text-lg mb-3"><i class="fas fa-list-ul"></i> My Submitted Requests</h3><div id="myRequestsList"></div></div>
-    `;
-    const user = getCurrentUser();
-    function refreshMyRequests() {
-      const allReqs = getRequests().filter(r => r.createdBy === user.email);
-      const listDiv = document.getElementById("myRequestsList");
-      if(!listDiv) return;
-      if(allReqs.length === 0) { listDiv.innerHTML = `<div class="text-center py-8 text-gray-400">📭 No requests submitted yet.</div>`; return; }
-      listDiv.innerHTML = allReqs.map(req => `
-        <div class="border-b border-gray-100 py-4 last:border-0">
-          <div class="flex justify-between flex-wrap"><span class="font-mono font-bold">${req.fileNumber}</span><span class="text-xs px-2 py-0.5 rounded-full ${req.status==='pending'?'bg-yellow-100 text-yellow-700':req.status==='approved'?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}">${req.status}</span></div>
-          <p class="text-gray-600 text-sm mt-1">${req.note || "—"}</p>
-          <div class="text-xs text-gray-400 flex gap-3">Entry: ${req.entryDate} | Exit: ${req.exitDate}</div>
-          ${renderPipelineComponent(req)}
-        </div>
-      `).join('');
-    }
-    document.getElementById("applicantRequestForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const fileNumber = document.getElementById("fileNum").value.trim();
-      const entryDate = document.getElementById("entryDt").value;
-      const exitDate = document.getElementById("exitDt").value;
-      const note = document.getElementById("noteTxt").value;
-      if(!fileNumber||!entryDate||!exitDate) { showToast("Fill required fields", "error"); return; }
-      const newId = Date.now();
-      const newRequest = { id: newId, fileNumber, note, entryDate, exitDate, createdBy: user.email, status: "pending", currentRole: "additional_secretary", history: [] };
-      const requests = getRequests();
-      requests.push(newRequest);
-      saveRequests(requests);
-      showToast(`Request "${fileNumber}" submitted!`, "success");
-      document.getElementById("applicantRequestForm").reset();
+      
+      function refreshMyRequests() {
+        const allReqs = getRequests().filter((r) => r.createdBy === user.email);
+        const listDiv = document.getElementById("myRequestsList");
+        if (!listDiv) return;
+        if (allReqs.length === 0) {
+          listDiv.innerHTML = `<div class="text-center py-8 text-gray-400">📭 এখনো কোনো আবেদন জমা দেওয়া হয়নি।</div>`;
+          return;
+        }
+        listDiv.innerHTML = allReqs.map((req) => {
+          let statusText = req.status === "pending" ? "বিচারাধীন" : req.status === "approved" ? "অনুমোদিত" : "নাকচ";
+          let statusClass = req.status === "pending" ? "bg-yellow-100 text-yellow-700" : req.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700";
+          return `
+            <div class="border-b border-gray-100 py-4 last:border-0">
+              <div class="flex justify-between flex-wrap"><span class="font-mono font-bold">${req.fileNumber}</span><span class="text-xs px-2 py-0.5 rounded-full ${statusClass}">${statusText}</span></div>
+              <p class="text-gray-600 text-sm mt-1">${req.note || "—"}</p>
+              <div class="text-xs text-gray-400 flex gap-3">প্রবেশ: ${req.entryDate} | প্রস্থান: ${req.exitDate}</div>
+              ${req.dataOperator ? `<div class="text-xs text-emerald-600 mt-1"><i class="fas fa-user-edit"></i> অপারেটর: ${req.dataOperator}</div>` : ''}
+              ${renderPipelineComponent(req)}
+            </div>
+          `;
+        }).join("");
+      }
+      
+      document.getElementById("applicantRequestForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const fileNumber = document.getElementById("fileNum").value.trim();
+        const entryDate = document.getElementById("entryDt").value;
+        const exitDate = document.getElementById("exitDt").value;
+        const note = document.getElementById("noteTxt").value;
+        const dataOperator = document.getElementById("dataOperator").value.trim();
+        
+        if (!fileNumber || !entryDate || !exitDate || !dataOperator) {
+          showToast("সব প্রয়োজনীয় তথ্য পূরণ করুন", "error");
+          return;
+        }
+        const newId = Date.now();
+        const newRequest = {
+          id: newId,
+          fileNumber,
+          note,
+          entryDate,
+          exitDate,
+          dataOperator: dataOperator,
+          createdBy: user.email,
+          status: "pending",
+          currentRole: "additional_secretary",
+          history: [],
+        };
+        const requests = getRequests();
+        requests.push(newRequest);
+        saveRequests(requests);
+        showToast(`"${fileNumber}" আবেদন জমা হয়েছে!`, "success");
+        document.getElementById("applicantRequestForm").reset();
+        refreshMyRequests();
+      });
       refreshMyRequests();
-    });
-    refreshMyRequests();
-  }
-  
-  // ----- OFFICER APPROVAL DASHBOARD -----
-  function renderOfficerApprovalUI() {
-    const container = document.getElementById("dynamicContentArea");
-    if (!container) return;
-    const user = getCurrentUser();
-    container.innerHTML = `
-      <div class="flex gap-3 mb-5 flex-wrap">
-        <button id="showPendingBtn" class="px-5 py-2 rounded-xl bg-emerald-100 font-medium"><i class="fas fa-inbox"></i> Pending for me</button>
-        <button id="showTrackAllBtn" class="px-5 py-2 rounded-xl bg-gray-100"><i class="fas fa-chart-simple"></i> Track all requests</button>
-      </div>
-      <div id="officerContentArea" class="glass-card p-5 min-h-[400px]"></div>
-    `;
-    let currentView = "pending";
-    const loadPending = () => {
-      const allRequests = getRequests().filter(r => r.currentRole === user.role && r.status === "pending");
-      const contentDiv = document.getElementById("officerContentArea");
-      if(!contentDiv) return;
-      if(allRequests.length === 0) { contentDiv.innerHTML = `<div class="text-center py-10 text-gray-500"><i class="fas fa-check-circle text-3xl mb-2"></i><p>No pending requests for ${user.role}</p></div>`; return; }
-      contentDiv.innerHTML = allRequests.map(req => `
-        <div class="border border-gray-100 rounded-2xl p-5 mb-5 bg-white/70 shadow-sm">
-          <div class="flex justify-between flex-wrap"><span class="font-bold text-emerald-800">📄 ${req.fileNumber}</span><span class="text-xs bg-yellow-100 px-2 py-1 rounded-full">pending · ${req.currentRole}</span></div>
-          <p class="text-gray-700 my-1">${req.note || "No additional note"}</p>
-          <div class="text-xs text-gray-400 flex gap-3">📅 ${req.entryDate} → ${req.exitDate} | 👤 by ${req.createdBy.split('@')[0]}</div>
-          ${renderPipelineComponent(req)}
-          <div class="mt-4 flex flex-wrap gap-3 items-center">
-            <input type="text" id="comment_${req.id}" placeholder="Add your comment (will appear in timeline)" class="flex-1 border rounded-xl p-2 text-sm">
-            <button class="acceptReqBtn bg-emerald-600 text-white px-5 py-2 rounded-xl" data-id="${req.id}"><i class="fas fa-check"></i> Accept</button>
-            <button class="rejectReqBtn bg-rose-500 text-white px-5 py-2 rounded-xl" data-id="${req.id}"><i class="fas fa-ban"></i> Reject</button>
+    }
+
+    // ----- অফিসার অনুমোদন ড্যাশবোর্ড (বাংলা) -----
+    function renderOfficerApprovalUI() {
+      const container = document.getElementById("dynamicContentArea");
+      if (!container) return;
+      const user = getCurrentUser();
+      container.innerHTML = `
+        <div class="flex gap-3 mb-5 flex-wrap">
+          <button id="showPendingBtn" class="px-5 py-2 rounded-xl bg-emerald-100 font-medium"><i class="fas fa-inbox"></i> আমার জন্য বিচারাধীন</button>
+          <button id="showTrackAllBtn" class="px-5 py-2 rounded-xl bg-gray-100"><i class="fas fa-chart-simple"></i> সব আবেদন ট্র্যাক করুন</button>
+        </div>
+        <div id="officerContentArea" class="glass-card p-5 min-h-[400px]"></div>
+      `;
+      let currentView = "pending";
+      
+      const loadPending = () => {
+        const allRequests = getRequests().filter((r) => r.currentRole === user.role && r.status === "pending");
+        const contentDiv = document.getElementById("officerContentArea");
+        if (!contentDiv) return;
+        if (allRequests.length === 0) {
+          contentDiv.innerHTML = `<div class="text-center py-10 text-gray-500"><i class="fas fa-check-circle text-3xl mb-2"></i><p>${user.role} এর জন্য কোনো বিচারাধীন আবেদন নেই</p></div>`;
+          return;
+        }
+        contentDiv.innerHTML = allRequests.map((req) => `
+          <div class="border border-gray-100 rounded-2xl p-5 mb-5 bg-white/70 shadow-sm">
+            <div class="flex justify-between flex-wrap"><span class="font-bold text-emerald-800">📄 ${req.fileNumber}</span><span class="text-xs bg-yellow-100 px-2 py-1 rounded-full">বিচারাধীন · ${req.currentRole}</span></div>
+            <p class="text-gray-700 my-1">${req.note || "কোন নোট নেই"}</p>
+            <div class="text-xs text-gray-400 flex gap-3">📅 ${req.entryDate} → ${req.exitDate} | 👤 আবেদনকারী: ${req.createdBy.split("@")[0]}</div>
+            ${req.dataOperator ? `<div class="text-xs text-emerald-600 mt-1"><i class="fas fa-user-edit"></i> তথ্য ইনপুট অপারেটর: ${req.dataOperator}</div>` : ''}
+            ${renderPipelineComponent(req)}
+            <div class="mt-4 flex flex-wrap gap-3 items-center">
+              <input type="text" id="comment_${req.id}" placeholder="আপনার মন্তব্য লিখুন (টাইমলাইনে দেখাবে)" class="flex-1 border rounded-xl p-2 text-sm">
+              <button class="acceptReqBtn bg-emerald-600 text-white px-5 py-2 rounded-xl" data-id="${req.id}"><i class="fas fa-check"></i> গ্রহণ করুন</button>
+              <button class="rejectReqBtn bg-rose-500 text-white px-5 py-2 rounded-xl" data-id="${req.id}"><i class="fas fa-ban"></i> নাকচ করুন</button>
+            </div>
           </div>
-        </div>
-      `).join('');
-      document.querySelectorAll(".acceptReqBtn").forEach(btn => btn.addEventListener("click", async (e) => { const id = parseInt(btn.dataset.id); const comment = document.getElementById(`comment_${id}`).value; await withLoading(null, async () => { if(updateRequestWorkflow(id, "accept", user.role, comment)) { showToast("Accepted & forwarded", "success"); loadPending(); } else showToast("Error", "error"); }); }));
-      document.querySelectorAll(".rejectReqBtn").forEach(btn => btn.addEventListener("click", async () => { const id = parseInt(btn.dataset.id); const comment = document.getElementById(`comment_${id}`).value; await withLoading(null, async () => { if(updateRequestWorkflow(id, "reject", user.role, comment)) { showToast("Request rejected", "info"); loadPending(); } else showToast("Error", "error"); }); }));
-    };
-    const loadAllTrack = () => {
-      const all = getRequests();
-      const contentDiv = document.getElementById("officerContentArea");
-      if(!contentDiv) return;
-      if(all.length === 0) { contentDiv.innerHTML = `<div class="text-center py-10">No requests in system</div>`; return; }
-      contentDiv.innerHTML = all.map(req => `
-        <div class="border-b border-gray-100 py-4 last:border-0">
-          <div class="flex justify-between"><span class="font-bold">${req.fileNumber}</span><span class="text-xs ${req.status==='pending'?'text-amber-600':req.status==='approved'?'text-green-600':'text-rose-600'}">${req.status || 'pending'}</span></div>
-          <div class="text-xs text-gray-500">Created by: ${req.createdBy} | Current: ${req.currentRole || 'finalized'}</div>
-          ${renderPipelineComponent(req)}
-        </div>
-      `).join('');
-    };
-    document.getElementById("showPendingBtn").addEventListener("click", () => { currentView = "pending"; loadPending(); });
-    document.getElementById("showTrackAllBtn").addEventListener("click", () => { currentView = "track"; loadAllTrack(); });
-    loadPending();
-  }
-  
-  // Initialize app
-  if(getCurrentUser()) renderDashboard(); else renderLogin();
-</script>
+        `).join("");
+        
+        document.querySelectorAll(".acceptReqBtn").forEach((btn) =>
+          btn.addEventListener("click", async (e) => {
+            const id = parseInt(btn.dataset.id);
+            const comment = document.getElementById(`comment_${id}`).value;
+            await withLoading(null, async () => {
+              if (updateRequestWorkflow(id, "accept", user.role, comment)) {
+                showToast("গ্রহণ করা হয়েছে ও পরবর্তীতে ফরওয়ার্ড করা হয়েছে", "success");
+                loadPending();
+              } else showToast("ত্রুটি", "error");
+            });
+          })
+        );
+        document.querySelectorAll(".rejectReqBtn").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            const id = parseInt(btn.dataset.id);
+            const comment = document.getElementById(`comment_${id}`).value;
+            await withLoading(null, async () => {
+              if (updateRequestWorkflow(id, "reject", user.role, comment)) {
+                showToast("আবেদন নাকচ করা হয়েছে", "info");
+                loadPending();
+              } else showToast("ত্রুটি", "error");
+            });
+          })
+        );
+      };
+      
+      const loadAllTrack = () => {
+        const all = getRequests();
+        const contentDiv = document.getElementById("officerContentArea");
+        if (!contentDiv) return;
+        if (all.length === 0) {
+          contentDiv.innerHTML = `<div class="text-center py-10">সিস্টেমে কোনো আবেদন নেই</div>`;
+          return;
+        }
+        contentDiv.innerHTML = all.map((req) => {
+          let statusText = req.status === "pending" ? "বিচারাধীন" : req.status === "approved" ? "অনুমোদিত" : "নাকচ";
+          return `
+            <div class="border-b border-gray-100 py-4 last:border-0">
+              <div class="flex justify-between"><span class="font-bold">${req.fileNumber}</span><span class="text-xs ${req.status === "pending" ? "text-amber-600" : req.status === "approved" ? "text-green-600" : "text-rose-600"}">${statusText}</span></div>
+              <div class="text-xs text-gray-500">আবেদনকারী: ${req.createdBy} | বর্তমান অবস্থান: ${req.currentRole || "সমাপ্ত"}</div>
+              ${req.dataOperator ? `<div class="text-xs text-emerald-600 mt-1"><i class="fas fa-user-edit"></i> তথ্য ইনপুট অপারেটর: ${req.dataOperator}</div>` : ''}
+              ${renderPipelineComponent(req)}
+            </div>
+          `;
+        }).join("");
+      };
+      
+      document.getElementById("showPendingBtn").addEventListener("click", () => { currentView = "pending"; loadPending(); });
+      document.getElementById("showTrackAllBtn").addEventListener("click", () => { currentView = "track"; loadAllTrack(); });
+      loadPending();
+    }
+
+    // Initialize app
+    if (getCurrentUser()) renderDashboard();
+    else renderLogin();
+  </script>
 </body>
 </html>
